@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server MOTD</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0f0f 0%, #1a0a0a 25%, #2a1414 50%, #1a0a0a 75%, #0f0f0f 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(26, 26, 26, 0.95);
+            backdrop-filter: blur(15px);
+            border-radius: 0;
+            box-shadow: 0 20px 60px rgba(220, 50, 50, 0.15);
+            border: 1px solid rgba(220, 50, 50, 0.1);
+        }
+
+        .sidebar {
+            width: 250px;
+            background: linear-gradient(180deg, #1a1a1a 0%, #2d1a1a 50%, #1a1a1a 100%);
+            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            border-right: 3px solid rgba(220, 50, 50, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sidebar::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, rgba(220, 50, 50, 0.05) 0%, transparent 50%, rgba(255, 255, 255, 0.02) 100%);
+            pointer-events: none;
+        }
+
+        .server-title {
+            color: #ff6b6b;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            padding: 0 20px;
+            text-shadow: 0 3px 15px rgba(255, 107, 107, 0.4);
+            position: relative;
+            z-index: 2;
+        }
+
+        .tab-button {
+            background: transparent;
+            color: rgba(255, 255, 255, 0.8);
+            border: none;
+            padding: 15px 25px;
+            text-align: left;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            border-left: 4px solid transparent;
+            margin: 3px 0;
+            position: relative;
+            z-index: 2;
+            backdrop-filter: blur(5px);
+        }
+
+        .tab-button:hover {
+            background: rgba(220, 50, 50, 0.15);
+            border-left-color: #ff6b6b;
+            color: #ffffff;
+            transform: translateX(5px);
+        }
+
+        .tab-button.active {
+            background: rgba(220, 50, 50, 0.25);
+            border-left-color: #ff4757;
+            color: #ffffff;
+            font-weight: bold;
+            box-shadow: 0 4px 20px rgba(220, 50, 50, 0.2);
+        }
+
+        .tab-button i {
+            margin-right: 10px;
+            width: 20px;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 30px;
+            overflow-y: auto;
+            background: linear-gradient(135deg, #1a1a1a 0%, #262626 50%, #1f1f1f 100%);
+            color: #e8e8e8;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+            animation: fadeInUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes fadeInUp {
+            from { 
+                opacity: 0; 
+                transform: translateY(20px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: translateY(0); 
+            }
+        }
+
+        .welcome-section h1 {
+            background: linear-gradient(45deg, #ff6b6b, #ff4757, #dc3232);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-align: center;
+            filter: drop-shadow(0 3px 15px rgba(255, 107, 107, 0.3));
+        }
+
+        .welcome-section p {
+            font-size: 1.2em;
+            line-height: 1.8;
+            color: #c8c8c8;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .server-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .info-card {
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.9) 0%, rgba(35, 35, 35, 0.8) 100%);
+            padding: 25px;
+            border-radius: 20px;
+            text-align: center;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(220, 50, 50, 0.15);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .info-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #ff6b6b, #ff4757, #dc3232);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+
+        .info-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 15px 40px rgba(220, 50, 50, 0.2);
+            border-color: rgba(255, 107, 107, 0.3);
+        }
+
+        .info-card:hover::before {
+            opacity: 1;
+        }
+
+        .info-card h3 {
+            background: linear-gradient(45deg, #ff6b6b, #ff4757);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+            filter: drop-shadow(0 2px 8px rgba(255, 107, 107, 0.2));
+        }
+
+        .info-card p {
+            color: #c8c8c8;
+            font-size: 1em;
+            line-height: 1.6;
+        }
+
+        .rules-iframe {
+            width: 100%;
+            height: 600px;
+            border: 2px solid rgba(220, 50, 50, 0.3);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            background: #1f1f1f;
+        }
+
+        .discord-section {
+            text-align: center;
+        }
+
+        .discord-section h2 {
+            background: linear-gradient(45deg, #ff6b6b, #ff4757, #dc3232);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 2.2em;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 3px 15px rgba(255, 107, 107, 0.3));
+        }
+
+        .discord-section p {
+            font-size: 1.1em;
+            color: #c8c8c8;
+            margin-bottom: 30px;
+            line-height: 1.8;
+        }
+
+        .discord-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff4757 50%, #dc3232 100%);
+            color: white;
+            text-decoration: none;
+            padding: 18px 35px;
+            border-radius: 50px;
+            font-size: 1.1em;
+            font-weight: 600;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 25px rgba(220, 50, 50, 0.4);
+            border: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .discord-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.8s ease;
+        }
+
+        .discord-button:hover::before {
+            left: 100%;
+        }
+
+        .discord-button:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 15px 40px rgba(220, 50, 50, 0.5);
+        }
+
+        .discord-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 25px;
+            margin-top: 40px;
+        }
+
+        .feature {
+            background: linear-gradient(135deg, rgba(42, 42, 42, 0.8) 0%, rgba(35, 35, 35, 0.6) 100%);
+            padding: 25px;
+            border-radius: 15px;
+            border-left: 4px solid #ff6b6b;
+            border: 1px solid rgba(220, 50, 50, 0.2);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        .feature:hover {
+            border-left-color: #ff4757;
+            border-color: rgba(255, 107, 107, 0.3);
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(220, 50, 50, 0.2);
+        }
+
+        .feature h4 {
+            background: linear-gradient(45deg, #ff6b6b, #ff4757);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            font-weight: 600;
+            filter: drop-shadow(0 1px 5px rgba(255, 107, 107, 0.2));
+        }
+
+        .feature p {
+            color: #c8c8c8;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
+        .close-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ff4757 100%);
+            color: white;
+            border: none;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: bold;
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000;
+            box-shadow: 0 6px 20px rgba(220, 50, 50, 0.4);
+        }
+
+        .close-button:hover {
+            transform: scale(1.1) rotate(90deg);
+            box-shadow: 0 10px 30px rgba(220, 50, 50, 0.6);
+        }
+
+        /* Elegant accent line */
+        .accent-line {
+            background: linear-gradient(90deg, transparent, #ff6b6b, #ff4757, #ff6b6b, transparent);
+            height: 2px;
+            width: 60%;
+            margin: 20px auto;
+            border-radius: 1px;
+            opacity: 0.6;
+        }
+
+        /* Smooth scrollbar styling */
+        .main-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .main-content::-webkit-scrollbar-track {
+            background: rgba(220, 50, 50, 0.05);
+            border-radius: 4px;
+        }
+
+        .main-content::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #ff6b6b, #ff4757);
+            border-radius: 4px;
+        }
+
+        .main-content::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #ff4757, #dc3232);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="server-title">🎮 Blackwater Networks</div>
+            
+            <button class="tab-button active" onclick="showTab('welcome')">
+                <i>🏠</i> Welcome!
+            </button>
+            
+            <button class="tab-button" onclick="showTab('rules')">
+                <i>📋</i> Server Rules
+            </button>
+            
+            <button class="tab-button" onclick="showTab('discord')">
+                <i>💬</i> Join our Community Discord!
+            </button>
+            
+            <button class="tab-button" onclick="showTab('info')">
+                <i>ℹ️</i> Server Info
+            </button>
+        </div>
+
+        <div class="main-content">
+            <!-- Welcome Tab -->
+            <div class="tab-content active" id="welcome">
+                <div class="welcome-section">
+                    <h1>Welcome to Our Server!</h1>
+                    <div class="accent-line"></div>
+                    <p>Thank you for joining our community. We're excited to have you here! Please take a moment to read through our rules and consider joining our Discord server to stay connected with the community.</p>
+                    
+                    <div class="server-info">
+                        <div class="info-card">
+                            <h3>🌟 Have Fun</h3>
+                            <p>Our primary goal is to ensure everyone has a great time playing together!</p>
+                        </div>
+                        <div class="info-card">
+                            <h3>🤝 Be Respectful</h3>
+                            <p>Treat all players with respect and maintain a friendly atmosphere.</p>
+                        </div>
+                        <div class="info-card">
+                            <h3>🎯 Fair Play</h3>
+                            <p>No cheating, exploiting, or griefing. Let's keep it fair for everyone!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Rules Tab -->
+            <div class="tab-content" id="rules">
+                <h2 style="background: linear-gradient(45deg, #ff6b6b, #ff4757, #dc3232); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 20px; text-align: center; font-size: 2em; filter: drop-shadow(0 3px 15px rgba(255, 107, 107, 0.3));">📋 Server Rules</h2>
+                <div class="accent-line"></div>
+                <p style="text-align: center; margin-bottom: 20px; color: #c8c8c8; font-size: 1.1em;">Please read and follow all server rules to ensure a positive experience for everyone.</p>
+                
+                <iframe class="rules-iframe" 
+                        src="https://docs.google.com/document/d/e/2PACX-1vSy3wyMdnkkJQjXEui3NYB0itxiv_k-EHwz0y4uOD1kbopGeeopuWiL3M_3eEjCgrKBpUJi7NHuafqc/pub?embedded=true"
+                        frameborder="0">
+                </iframe>
+                
+                <p style="margin-top: 20px; text-align: center; color: #999; font-style: italic;">
+                    If you have any questions about the rules, feel free to ask an admin or moderator.
+                </p>
+            </div>
+
+            <!-- Discord Tab -->
+            <div class="tab-content" id="discord">
+                <div class="discord-section">
+                    <h2>💬 Join Our Discord Server</h2>
+                    <div class="accent-line"></div>
+                    <p>Connect with our community, get updates, find teammates, and chat with fellow players outside of the game!</p>
+                    
+                    <a href="https://discord.gg/ZRBTQGes2f" target="_blank" class="discord-button">
+                        🚀 Join Discord Server
+                    </a>
+                    
+                    <div class="discord-features">
+                        <div class="feature">
+                            <h4>📢 Server Updates</h4>
+                            <p>Get notified about server maintenance, new features, and important announcements.</p>
+                        </div>
+                        <div class="feature">
+                            <h4>🎮 Find Players</h4>
+                            <p>Looking for teammates or someone to play with? Our Discord is the perfect place to connect.</p>
+                        </div>
+                        <div class="feature">
+                            <h4>🎉 Community Events</h4>
+                            <p>Participate in tournaments, contests, and special events organized by our community.</p>
+                        </div>
+                        <div class="feature">
+                            <h4>💡 Suggestions</h4>
+                            <p>Have ideas for the server? Share your suggestions and help shape our community.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Server Info Tab -->
+            <div class="tab-content" id="info">
+                <h2 style="background: linear-gradient(45deg, #ff6b6b, #ff4757, #dc3232); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 30px; text-align: center; font-size: 2em; filter: drop-shadow(0 3px 15px rgba(255, 107, 107, 0.3));">ℹ️ Server Information</h2>
+                <div class="accent-line"></div>
+                
+                <div class="server-info">
+                    <div class="info-card">
+                        <h3>🕒 Server Uptime</h3>
+                        <p>24/7 with scheduled maintenance windows announced in advance.</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>🌍 Server Location</h3>
+                        <p>Hosted in Finland for optimal performance.</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>👥 Max Players</h3>
+                        <p>Up to 128 players can join simultaneously.</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>🔧 Game Modes</h3>
+                        <p>StarWarsRP, A derivative of DarkRP.</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>📦 Custom Content</h3>
+                        <p>Unique addons and custom maps for enhanced gameplay.</p>
+                    </div>
+                    <div class="info-card">
+                        <h3>🛡️ Anti-Cheat</h3>
+                        <p>Advanced protection systems to ensure fair play.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="close-button" onclick="closeMOTD()" title="Close MOTD">×</button>
+
+    <script>
+        function showTab(tabName) {
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+
+            const tabButtons = document.querySelectorAll('.tab-button');
+            tabButtons.forEach(button => {
+                button.classList.remove('active');
+            });
+
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function closeMOTD() {
+            if (typeof gmod !== 'undefined' && gmod.CloseMOTD) {
+                gmod.CloseMOTD();
+            } else {
+                window.close();
+            }
+        }
+    </script>
+</body>
+</html>
